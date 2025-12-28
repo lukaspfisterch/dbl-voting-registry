@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -U pip
+      - run: pip install -e .
+      # In a real scenario, you would install dbl-core here. 
+      # Since this is a local monorepo setup, we assume dbl-core is vendored or available.
+      # For this reference file, we assume standard install.
+      - run: python -m pytest -q
+      
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbl-proof
+          path: .pytest_cache/v/cache/
