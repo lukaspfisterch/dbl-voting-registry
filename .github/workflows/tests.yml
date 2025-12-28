@@ -12,11 +12,29 @@ jobs:
         python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -U pip
-      - run: pip install git+https://github.com/lukaspfisterch/kl-kernel-logic.git
-      - run: pip install git+https://github.com/lukaspfisterch/dbl-core.git
-      - run: pip install -e .
-      - run: python -m pytest -q
+
+      - name: Upgrade pip
+        run: python -m pip install -U pip
+
+      - name: Install dependencies
+        run: |
+          pip install git+https://github.com/lukaspfisterch/kl-kernel-logic.git
+          pip install git+https://github.com/lukaspfisterch/dbl-core.git
+          pip install -e .
+
+      - name: Debug environment
+        run: |
+          python -V
+          python -m pip --version
+          python -m pip list
+          python -c "import sys; print('sys.path=', sys.path)"
+          python -c "import dbl_core; print('dbl_core=', dbl_core.__file__)"
+          python -c "import kl_kernel_logic; print('kl_kernel_logic=', kl_kernel_logic.__file__)"
+          python -c "import dbl_voting_registry; print('dbl_voting_registry=', dbl_voting_registry.__file__)"
+
+      - name: Run tests
+        run: python -m pytest -q -vv
