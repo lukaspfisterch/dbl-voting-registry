@@ -7,8 +7,8 @@ name = "dbl-voting-registry"
 version = "0.1.0"
 description = "A deterministic voting registry Domainrunner"
 dependencies = [
-    "dbl-core",
-    "dbl-ingress==0.1.0",
+    "dbl-core==0.3.1",
+    "dbl-ingress @ git+https://github.com/lukaspfisterch/dbl-ingress.git@main",
 ]
 requires-python = ">=3.11"
 authors = [
@@ -21,3 +21,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
