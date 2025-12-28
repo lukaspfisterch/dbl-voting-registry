@@ -22,19 +22,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install -U pytest
           pip install git+https://github.com/lukaspfisterch/kl-kernel-logic.git
           pip install git+https://github.com/lukaspfisterch/dbl-core.git
           pip install -e .
-
-      - name: Debug environment
-        run: |
-          python -V
-          python -m pip --version
-          python -m pip list
-          python -c "import sys; print('sys.path=', sys.path)"
-          python -c "import dbl_core; print('dbl_core=', dbl_core.__file__)"
-          python -c "import kl_kernel_logic; print('kl_kernel_logic=', kl_kernel_logic.__file__)"
-          python -c "import dbl_voting_registry; print('dbl_voting_registry=', dbl_voting_registry.__file__)"
 
       - name: Run tests
         run: python -m pytest -q -vv
