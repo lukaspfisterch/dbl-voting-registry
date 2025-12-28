@@ -1,7 +1,10 @@
-from typing import Dict, Set, Optional
+from typing import Dict, Mapping, Set
 import uuid
 from dbl_core.behavior.log import BehaviorV
+from dbl_core.events.model import DblEventKind
 from dbl_voting_registry.events import VotingEvents
+from dbl_ingress.shaping.shape import shape_input
+from dbl_ingress.admission.model import AdmissionRecord
 
 class VotingRegistry:
     def __init__(self):
@@ -22,18 +25,15 @@ class VotingRegistry:
 
     def _apply_event(self, event):
         # Update projection
+        if event.event_kind != DblEventKind.DECISION:
+            return
         data = event.data
         # data might be frozen (Mapping), handle generic access
-        
         etype = data.get("type")
 
         if etype == "PROPOSAL_SUBMITTED":
             self._proposals.add(data["proposal_id"])
             self._votes[data["proposal_id"]] = {}
-        
-        elif etype == "ELIGIBILITY_CHECKED":
-            # Observational only. Does NOT affect state.
-            pass
         
         elif etype == "VOTER_ADMITTED":
             # Normative Decision. Updates state.
@@ -49,51 +49,84 @@ class VotingRegistry:
         elif etype == "RESULT_CERTIFIED":
             self._certified_results.add(data["proposal_id"])
 
-    def submit_proposal(self, text: str) -> str:
+    def _admit(
+        self,
+        *,
+        correlation_id: str,
+        deterministic: Mapping[str, object],
+        observational: Mapping[str, object] | None = None,
+    ) -> AdmissionRecord:
+        return shape_input(
+            correlation_id=correlation_id,
+            deterministic=deterministic,
+            observational=observational,
+        )
+
+    def submit_proposal(self, raw: Mapping[str, object]) -> str:
         pid = str(uuid.uuid4())
         base_id = str(uuid.uuid4()) # Correlation for this flow
-        event = VotingEvents.proposal_submitted(base_id, pid, text)
+        admission = self._admit(
+            correlation_id=base_id,
+            deterministic={"text": raw["text"]},
+            observational=raw.get("observational") if isinstance(raw.get("observational"), Mapping) else None,
+        )
+        event = VotingEvents.proposal_submitted(admission, pid)
         self._append(event)
         return pid
 
-    def check_eligibility(self, user_id: str, proof: dict) -> bool:
-        # Simulate external check logic.
-        is_valid = proof.get("secret") == "valid_token"
+    def check_eligibility(self, raw: Mapping[str, object]) -> bool:
+        admission = self._admit(
+            correlation_id=str(uuid.uuid4()),
+            deterministic={
+                "user_id": raw["user_id"],
+                "eligible": raw["eligible"],
+            },
+            observational=raw.get("proof") if isinstance(raw.get("proof"), Mapping) else None,
+        )
+        eligible = admission.deterministic["eligible"]
+        if not isinstance(eligible, bool):
+            raise ValueError("eligible must be a boolean")
         
         # 1. Emit Observational Proof (Records that we checked, and what we saw)
-        proof_id = str(uuid.uuid4())
-        proof_event = VotingEvents.eligibility_checked(proof_id, user_id, proof_data=proof)
+        proof_event = VotingEvents.eligibility_checked(admission)
         self._append(proof_event)
         
-        if is_valid:
+        if eligible:
             # 2. Emit Normative Decision (If check passed)
-            decision_id = str(uuid.uuid4())
-            decision_event = VotingEvents.voter_admitted(decision_id, user_id)
+            decision_event = VotingEvents.voter_admitted(admission)
             self._append(decision_event)
             return True
         else:
             return False
 
-    def cast_vote(self, proposal_id: str, user_id: str, vote: str) -> bool:
+    def cast_vote(self, raw: Mapping[str, object]) -> bool:
         # 1. Check constraints (Boundary logic)
-        if proposal_id not in self._proposals:
+        if raw["proposal_id"] not in self._proposals:
             raise ValueError("Unknown proposal")
-        if user_id not in self._eligible_users:
+        if raw["user_id"] not in self._eligible_users:
             raise ValueError("User not eligible (must pass check_eligibility first)")
-        if proposal_id in self._certified_results:
+        if raw["proposal_id"] in self._certified_results:
             raise ValueError("Voting closed")
 
-        base_id = str(uuid.uuid4())
-        event = VotingEvents.vote_cast(base_id, proposal_id, user_id, vote)
+        admission = self._admit(
+            correlation_id=str(uuid.uuid4()),
+            deterministic={
+                "proposal_id": raw["proposal_id"],
+                "user_id": raw["user_id"],
+                "vote": raw["vote"],
+            },
+            observational=raw.get("observational") if isinstance(raw.get("observational"), Mapping) else None,
+        )
+        event = VotingEvents.vote_cast(admission)
         self._append(event)
         return True
 
-    def certify_result(self, proposal_id: str) -> dict:
-        if proposal_id not in self._proposals:
+    def certify_result(self, raw: Mapping[str, object]) -> dict:
+        if raw["proposal_id"] not in self._proposals:
             raise ValueError("Unknown proposal")
         
         # Calculate tally from projection
-        votes = self._votes.get(proposal_id, {})
+        votes = self._votes.get(raw["proposal_id"], {})
         tally = {"Yes": 0, "No": 0}
         for v in votes.values():
             if v in tally:
@@ -101,8 +134,12 @@ class VotingRegistry:
             else:
                 tally[v] = tally.get(v, 0) + 1
         
-        base_id = str(uuid.uuid4())
-        event = VotingEvents.result_certified(base_id, proposal_id, tally)
+        admission = self._admit(
+            correlation_id=str(uuid.uuid4()),
+            deterministic={"proposal_id": raw["proposal_id"]},
+            observational=raw.get("observational") if isinstance(raw.get("observational"), Mapping) else None,
+        )
+        event = VotingEvents.result_certified(admission, tally)
         self._append(event)
         return tally
 

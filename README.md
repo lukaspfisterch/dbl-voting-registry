@@ -8,6 +8,7 @@ A minimal reference Domainrunner that demonstrates DBL-compliant deterministic v
 ## DBL invariants demonstrated
 - **Normativity is expressed exclusively via DECISION events.**
 - **Observational events (PROOF) are non-interfering**: changing observational payload does not change digests.
+- **Ingress is mandatory**: all external inputs are admitted and frozen before any decision is made.
 
 Example (observational payload only):
 ```json
@@ -39,6 +40,7 @@ Key tests:
 
 ## Mini-Walkthrough
 - **Events** (`events.py`): All normative changes are `DECISION` events. All checks are `PROOF` events.
+- **Ingress** (`dbl_ingress.shape_input`): All external input is validated and frozen before use.
 - **Lifecycle** (`registry.py`): `check_eligibility()` emits a `PROOF` (what was observed) and, if valid, a `DECISION` (`VOTER_ADMITTED`).
 - **Projection**: In-memory state (for validation only) is derived exclusively from `DECISION` events.
 
@@ -74,6 +76,10 @@ Match? True
 - `src/dbl_voting_registry/`: Domain logic and event definitions
 - `tests/`: Verification of invariants (auditability, determinism)
 - `demo.py`: End-to-end execution example
+
+## Why ingress is separate
+Ingress (dbl-ingress) is the mandatory boundary gate. It performs strict validation and freezing only.
+Domain logic consumes AdmissionRecord data and must not accept raw input dictionaries directly.
 
 > Non-goal: This project does not address policy quality, correctness, or distributed consensus. It demonstrates structural determinism and auditability only.
 

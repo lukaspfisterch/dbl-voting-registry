@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "A deterministic voting registry Domainrunner"
 dependencies = [
     "dbl-core",
+    "dbl-ingress==0.1.0",
 ]
 requires-python = ">=3.11"
 authors = [

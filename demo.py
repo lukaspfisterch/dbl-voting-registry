@@ -16,7 +16,7 @@ def main():
 
     # 1. Submit Proposal
     print("\n[Step 1] Submitting Proposal")
-    pid = registry.submit_proposal("Should we adopt DBL for all governance?")
+    pid = registry.submit_proposal({"text": "Should we adopt DBL for all governance?"})
     print(f"Proposal ID: {pid}")
 
     # 2. Eligibility Checks
@@ -30,32 +30,34 @@ def main():
     }
 
     for user in users:
-        is_valid = registry.check_eligibility(user, proofs[user])
+        is_valid = registry.check_eligibility(
+            {"user_id": user, "eligible": proofs[user]["secret"] == "valid_token", "proof": proofs[user]}
+        )
         print(f"User {user} eligible? {is_valid}")
 
     # 3. Cast Votes
     print("\n[Step 3] Casting Votes")
     # Alice votes Yes
-    registry.cast_vote(pid, "Alice", "Yes")
+    registry.cast_vote({"proposal_id": pid, "user_id": "Alice", "vote": "Yes"})
     print("Alice voted Yes")
 
     # Bob votes No
-    registry.cast_vote(pid, "Bob", "No")
+    registry.cast_vote({"proposal_id": pid, "user_id": "Bob", "vote": "No"})
     print("Bob voted No")
     
     # Charlie votes Yes
-    registry.cast_vote(pid, "Charlie", "Yes")
+    registry.cast_vote({"proposal_id": pid, "user_id": "Charlie", "vote": "Yes"})
     print("Charlie voted Yes")
 
     # Mallory tries to vote
     try:
-        registry.cast_vote(pid, "Mallory", "Yes")
+        registry.cast_vote({"proposal_id": pid, "user_id": "Mallory", "vote": "Yes"})
     except ValueError as e:
         print(f"Mallory vote failed as expected: {e}")
 
     # 4. Certify
     print("\n[Step 4] Certifying Results")
-    tally = registry.certify_result(pid)
+    tally = registry.certify_result({"proposal_id": pid})
     print(f"Final Tally: {tally}")
 
     # 5. Digest

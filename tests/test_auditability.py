@@ -1,7 +1,8 @@
 
 from dbl_core.behavior.log import BehaviorV
-from dbl_voting_registry.events import VotingEvents
 from dbl_core.events.model import DblEventKind
+from dbl_ingress.shaping.shape import shape_input
+from dbl_voting_registry.events import VotingEvents
 
 def test_observational_non_interference():
     """
@@ -10,14 +11,15 @@ def test_observational_non_interference():
     Includes nested data to stress canonicalization.
     """
     # 1. Original Event (Now PROOF kind)
-    e1 = VotingEvents.eligibility_checked(
+    admission1 = shape_input(
         correlation_id="corr_check",
-        user_id="Alice",
-        proof_data={
-            "secret": "valid_token", 
-            "meta": {"timestamp": "12:00", "ip": "1.1.1.1"}
-        }
+        deterministic={"user_id": "Alice"},
+        observational={
+            "secret": "valid_token",
+            "meta": {"timestamp": "12:00", "ip": "1.1.1.1"},
+        },
     )
+    e1 = VotingEvents.eligibility_checked(admission1)
     # A) Fix: Use Enum comparison
     assert e1.event_kind == DblEventKind.PROOF
     
@@ -29,14 +31,15 @@ def test_observational_non_interference():
     assert "meta" in e1.observational["proof_details"]
     
     # 2. Modified Event (different observational data, nested change)
-    e2 = VotingEvents.eligibility_checked(
+    admission2 = shape_input(
         correlation_id="corr_check",
-        user_id="Alice",
-        proof_data={
-            "secret": "valid_token", 
-            "meta": {"timestamp": "12:01", "ip": "9.9.9.9"} # CHANGED
-        }
+        deterministic={"user_id": "Alice"},
+        observational={
+            "secret": "valid_token",
+            "meta": {"timestamp": "12:01", "ip": "9.9.9.9"},  # CHANGED
+        },
     )
+    e2 = VotingEvents.eligibility_checked(admission2)
 
     # Sanity check: they are different objects with different observational data
     assert e1 != e2
@@ -53,16 +56,18 @@ def test_normative_change_affects_digest():
     Verify that changing normative fields (e.g. user_id)
     DOES change the digest.
     """
-    e1 = VotingEvents.eligibility_checked(
+    admission1 = shape_input(
         correlation_id="corr1",
-        user_id="Alice",
-        proof_data={"s": "1"}
+        deterministic={"user_id": "Alice"},
+        observational={"s": "1"},
     )
-    e2 = VotingEvents.eligibility_checked(
+    admission2 = shape_input(
         correlation_id="corr1",
-        user_id="Bob", # CHANGED
-        proof_data={"s": "1"}
+        deterministic={"user_id": "Bob"},  # CHANGED
+        observational={"s": "1"},
     )
+    e1 = VotingEvents.eligibility_checked(admission1)
+    e2 = VotingEvents.eligibility_checked(admission2)
 
     assert e1.digest() != e2.digest()
 
@@ -70,8 +75,18 @@ def test_log_digest_invariance():
     """
     Verify that a log containing e1 vs e2 (observational diff) has same digest.
     """
-    e1 = VotingEvents.eligibility_checked("c", "u", {"obs": 1})
-    e2 = VotingEvents.eligibility_checked("c", "u", {"obs": 2})
+    admission1 = shape_input(
+        correlation_id="c",
+        deterministic={"user_id": "u"},
+        observational={"obs": 1},
+    )
+    admission2 = shape_input(
+        correlation_id="c",
+        deterministic={"user_id": "u"},
+        observational={"obs": 2},
+    )
+    e1 = VotingEvents.eligibility_checked(admission1)
+    e2 = VotingEvents.eligibility_checked(admission2)
 
     v1 = BehaviorV(events=(e1,))
     v2 = BehaviorV(events=(e2,))
