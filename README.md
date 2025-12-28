@@ -77,3 +77,8 @@ Match? True
 
 > Non-goal: This project does not address policy quality, correctness, or distributed consensus. It demonstrates structural determinism and auditability only.
 
+---
+
+If you want the full DBL model and repository map, see:
+https://github.com/lukaspfisterch/deterministic-boundary-layer
+
