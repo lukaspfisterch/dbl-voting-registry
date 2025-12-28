@@ -36,7 +36,6 @@ Key tests:
 - `tests/test_auditability.py`
 - `tests/test_determinism.py`
 
-![Test Success](tests/success_screenshot.png)
 
 ## Mini-Walkthrough
 - **Events** (`events.py`): All normative changes are `DECISION` events. All checks are `PROOF` events.
