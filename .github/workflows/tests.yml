@@ -16,12 +16,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -U pip
+      - run: pip install git+https://github.com/lukaspfisterch/kl-kernel-logic.git
+      - run: pip install git+https://github.com/lukaspfisterch/dbl-core.git
       - run: pip install -e .
-      # In a real scenario, you would install dbl-core here. 
-      # Since this is a local monorepo setup, we assume dbl-core is vendored or available.
-      # For this reference file, we assume standard install.
       - run: python -m pytest -q
-      
+
       - name: Upload artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
