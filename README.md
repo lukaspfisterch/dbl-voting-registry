@@ -1,6 +1,6 @@
 # dbl-voting-registry
 
-![tests](actions/workflows/tests.yml/badge.svg)
+[![tests](https://github.com/lukaspfisterch/dbl-voting-registry/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/lukaspfisterch/dbl-voting-registry/actions/workflows/tests.yml)
 
 ## What this is
 A minimal reference Domainrunner that demonstrates DBL-compliant deterministic voting over an append-only event log.
@@ -76,3 +76,4 @@ Match? True
 - `demo.py`: End-to-end execution example
 
 > Non-goal: This project does not address policy quality, correctness, or distributed consensus. It demonstrates structural determinism and auditability only.
+
