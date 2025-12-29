@@ -91,9 +91,20 @@ def main():
     
     # 8. Invariance Demonstration
     print("\n[Invariance Check]")
+    from dbl_ingress.admission.model import AdmissionRecord
     from dbl_voting_registry.events import VotingEvents
-    p1 = VotingEvents.eligibility_checked("corr_x", "UserX", {"meta": {"t": "12:00"}})
-    p2 = VotingEvents.eligibility_checked("corr_x", "UserX", {"meta": {"t": "12:01"}})
+    adm1 = AdmissionRecord(
+        correlation_id="corr_x",
+        deterministic={"user_id": "UserX"},
+        observational={"meta": {"t": "12:00"}},
+    )
+    adm2 = AdmissionRecord(
+        correlation_id="corr_x",
+        deterministic={"user_id": "UserX"},
+        observational={"meta": {"t": "12:01"}},
+    )
+    p1 = VotingEvents.eligibility_checked(adm1)
+    p2 = VotingEvents.eligibility_checked(adm2)
     print(f"Proof 1 Digest (t=12:00): {p1.digest()}")
     print(f"Proof 2 Digest (t=12:01): {p2.digest()}")
     print(f"Match? {p1.digest() == p2.digest()}")
